@@ -55,47 +55,38 @@ class Imbox:
             hostname=self.hostname, username=self.username))
 
     def mark_seen(self, uid):
-        logger.info("Mark UID {} with \\Seen FLAG".format(int(uid)))
+        logger.info(f"Mark UID {int(uid)} with \\Seen FLAG")
         self.connection.uid('STORE', uid, '+FLAGS', '(\\Seen)')
 
     def mark_flag(self, uid):
-        logger.info("Mark UID {} with \\Flagged FLAG".format(int(uid)))
+        logger.info(f"Mark UID {int(uid)} with \\Flagged FLAG")
         self.connection.uid('STORE', uid, '+FLAGS', '(\\Flagged)')
 
     def delete(self, uid):
-        logger.info(
-            "Mark UID {} with \\Deleted FLAG and expunge.".format(int(uid)))
+        logger.info(f"Mark UID {int(uid)} with \\Deleted FLAG and expunge.")
         self.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
         self.connection.expunge()
 
     def copy(self, uid, destination_folder):
-        logger.info("Copy UID {} to {} folder".format(
-            int(uid), str(destination_folder)))
+        logger.info(f"Copy UID {int(uid)} to {str(destination_folder)} folder")
         return self.connection.uid('COPY', uid, destination_folder)
 
     def move(self, uid, destination_folder):
-        logger.info("Move UID {} to {} folder".format(
-            int(uid), str(destination_folder)))
+        logger.info(f"Move UID {int(uid)} to {str(destination_folder)} folder")
         if self.copy(uid, destination_folder):
             self.delete(uid)
 
     def messages(self, **kwargs):
-        folder = kwargs.get('folder', False)
-
-        messages_class = Messages
-
-        if self.vendor == 'gmail':
-            messages_class = GmailMessages
-
-        if folder:
+        messages_class = GmailMessages if self.vendor == 'gmail' else Messages
+        if folder := kwargs.get('folder', False):
             self.connection.select(
                 messages_class.FOLDER_LOOKUP.get((folder.lower())) or folder)
-            msg = " from folder '{}'".format(folder)
+            msg = f" from folder '{folder}'"
             del kwargs['folder']
         else:
             msg = " from inbox"
 
-        logger.info("Fetch list of messages{}".format(msg))
+        logger.info(f"Fetch list of messages{msg}")
 
         return messages_class(connection=self.connection,
                               parser_policy=self.parser_policy,

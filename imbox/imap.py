@@ -32,6 +32,7 @@ class ImapTransport:
     def connect(self, username, password):
         self.server.login(username, password)
         self.server.select()
-        logger.debug("Logged into server {} and selected mailbox 'INBOX'"
-                     .format(self.hostname))
+        logger.debug(
+            f"Logged into server {self.hostname} and selected mailbox 'INBOX'"
+        )
         return self.server

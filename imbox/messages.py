@@ -36,7 +36,7 @@ class Messages:
         self.kwargs = kwargs
         self._uid_list = self._query_uids(**kwargs)
 
-        logger.debug("Fetch all messages for UID in {}".format(self._uid_list))
+        logger.debug(f"Fetch all messages for UID in {self._uid_list}")
 
     def _fetch_email(self, uid):
         return fetch_email_by_uid(uid=uid,
@@ -46,9 +46,7 @@ class Messages:
     def _query_uids(self, **kwargs):
         query_ = build_search_query(self.IMAP_ATTRIBUTE_LOOKUP, **kwargs)
         _, data = self.connection.uid('search', None, query_)
-        if data[0] is None:
-            return []
-        return data[0].split()
+        return [] if data[0] is None else data[0].split()
 
     def _fetch_email_list(self):
         for uid in self._uid_list:
@@ -56,8 +54,9 @@ class Messages:
 
     def __repr__(self):
         if len(self.kwargs) > 0:
-            return 'Messages({})'.format('\n'.join('{}={}'.format(key, value)
-                                                   for key, value in self.kwargs.items()))
+            return 'Messages({})'.format(
+                '\n'.join(f'{key}={value}' for key, value in self.kwargs.items())
+            )
         return 'Messages(ALL)'
 
     def __iter__(self):

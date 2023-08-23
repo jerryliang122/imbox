@@ -18,7 +18,7 @@ def str_decode(value='', encoding=None, errors='strict'):
     elif isinstance(value, bytes):
         return value.decode(encoding or 'utf-8', errors=errors)
     else:
-        raise TypeError("Cannot decode '{}' object".format(value.__class__))
+        raise TypeError(f"Cannot decode '{value.__class__}' object")
 
 
 def date_to_date_text(date):

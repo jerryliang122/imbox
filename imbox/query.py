@@ -13,7 +13,4 @@ def build_search_query(imap_attribute_lookup, **kwargs):
                 value = value.replace('"', "'")
             query.append(imap_attribute_lookup[name].format(value))
 
-    if query:
-        return " ".join(query)
-
-    return "(ALL)"
+    return " ".join(query) if query else "(ALL)"

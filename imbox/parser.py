@@ -54,14 +54,15 @@ def get_mail_addresses(message, header_name):
     """
     Retrieve all email addresses from one message header.
     """
-    headers = [h for h in message.get_all(header_name, [])]
+    headers = list(message.get_all(header_name, []))
     addresses = email.utils.getaddresses(headers)
 
     for index, (address_name, address_email) in enumerate(addresses):
         addresses[index] = {'name': decode_mail_header(address_name),
                             'email': address_email}
-        logger.debug("{} Mail address in message: <{}> {}".format(
-            header_name.upper(), address_name, address_email))
+        logger.debug(
+            f"{header_name.upper()} Mail address in message: <{address_name}> {address_email}"
+        )
     return addresses
 
 
@@ -70,16 +71,13 @@ def decode_param(param):
     values = v.split('\n')
     value_results = []
     for value in values:
-        match = re.findall(r'=\?((?:\w|-)+)\?([QB])\?(.+?)\?=', value)
-        if match:
+        if match := re.findall(r'=\?((?:\w|-)+)\?([QB])\?(.+?)\?=', value):
             for encoding, type_, code in match:
                 if type_ == 'Q':
                     value = quopri.decodestring(code)
                 elif type_ == 'B':
                     value = code.encode()
-                    missing_padding = len(value) % 4
-
-                    if missing_padding:
+                    if missing_padding := len(value) % 4:
                         value += b"=" * (4 - missing_padding)
 
                     value = base64.b64decode(value)
@@ -91,7 +89,7 @@ def decode_param(param):
     if value_results:
         v = ''.join(value_results)
 
-    logger.debug("Decoded parameter {} - {}".format(name, v))
+    logger.debug(f"Decoded parameter {name} - {v}")
     return name, v
 
 
@@ -105,7 +103,7 @@ def parse_content_disposition(content_disposition):
         if content_disposition[i] == ';' and not in_quote:
             ret.append(content_disposition[str_start:i])
             str_start = i+1
-        elif content_disposition[i] == '"' or content_disposition[i] == "'":
+        elif content_disposition[i] in ['"', "'"]:
             in_quote = not in_quote
 
     if str_start < len(content_disposition):
@@ -167,8 +165,7 @@ def decode_content(message):
     try:
         return content.decode(charset, 'ignore')
     except LookupError:
-        encoding = chardet.detect(content).get('encoding')
-        if encoding:
+        if encoding := chardet.detect(content).get('encoding'):
             return content.decode(encoding, 'ignore')
         return content
     except AttributeError:
@@ -177,7 +174,7 @@ def decode_content(message):
 
 def fetch_email_by_uid(uid, connection, parser_policy):
     message, data = connection.uid('fetch', uid, '(BODY.PEEK[] FLAGS)')
-    logger.debug("Fetched message for UID {}".format(int(uid)))
+    logger.debug(f"Fetched message for UID {int(uid)}")
 
     raw_headers = data[0][0] + data[1]
     raw_email = data[0][1]
@@ -198,11 +195,7 @@ def parse_flags(headers):
 
 
 def parse_email(raw_email, policy=None):
-    if policy is not None:
-        email_parse_kwargs = dict(policy=policy)
-    else:
-        email_parse_kwargs = {}
-
+    email_parse_kwargs = dict(policy=policy) if policy is not None else {}
     # Should first get content charset then str_encode with charset.
     if isinstance(raw_email, bytes):
         email_message = email.message_from_bytes(
@@ -232,7 +225,7 @@ def parse_email(raw_email, policy=None):
             content_type = part.get_content_type()
             part_maintype = part.get_content_maintype()
             content_disposition = part.get('Content-Disposition', None)
-            if content_disposition or not part_maintype == "text":
+            if content_disposition or part_maintype != "text":
                 content = part.get_payload(decode=True)
             else:
                 content = decode_content(part)
@@ -244,8 +237,7 @@ def parse_email(raw_email, policy=None):
             elif content_type == "text/html" and is_inline:
                 body['html'].append(content)
             elif content_disposition:
-                attachment = parse_attachment(part)
-                if attachment:
+                if attachment := parse_attachment(part):
                     attachments.append(attachment)
 
     elif maintype == 'text':
@@ -253,10 +245,9 @@ def parse_email(raw_email, policy=None):
         body['plain'].append(payload)
 
     elif maintype == 'application':
-            if email_message.get_content_subtype() == 'pdf':
-                attachment = parse_attachment(email_message)
-                if attachment:
-                    attachments.append(attachment)
+        if email_message.get_content_subtype() == 'pdf':
+            if attachment := parse_attachment(email_message):
+                attachments.append(attachment)
 
     parsed_email['attachments'] = attachments
 
@@ -289,6 +280,7 @@ def parse_email(raw_email, policy=None):
     if parsed_email.get('date'):
         parsed_email['parsed_date'] = email.utils.parsedate_to_datetime(parsed_email['date'])
 
-    logger.info("Downloaded and parsed mail '{}' with {} attachments".format(
-        parsed_email.get('subject'), len(parsed_email.get('attachments'))))
+    logger.info(
+        f"Downloaded and parsed mail '{parsed_email.get('subject')}' with {len(parsed_email.get('attachments'))} attachments"
+    )
     return Struct(**parsed_email)
