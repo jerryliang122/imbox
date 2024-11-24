@@ -2,6 +2,7 @@ import imaplib
 
 from imbox.imap import ImapTransport
 from imbox.messages import Messages
+import imbox.imap_utf7 as imap_utf7
 
 import logging
 
@@ -104,4 +105,11 @@ class Imbox:
                               **kwargs)
 
     def folders(self):
-        return self.connection.list()
+        list_folders = self.connection.list()
+        #解码 list_folders
+        if list_folders[0] != 'OK':
+            return list_folders
+        list_folders_decode = []
+        for i in list_folders[1]:
+            list_folders_decode.append(imap_utf7.utf7_decode(i))
+        return (list_folders[0], list_folders_decode)
